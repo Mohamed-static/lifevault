@@ -34,7 +34,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Erreur lors de la suppression" }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (e) {
     return new Response(JSON.stringify({ error: "Erreur interne" }), { status: 500 });
   }
