@@ -23,7 +23,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() { _isLoading = true; _errorMessage = null; });
     try {
       await _authService.signUp(email: _emailController.text.trim(), password: _passwordController.text, fullName: _nameController.text.trim());
-      if (mounted) Navigator.pop(context);
+      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Compte cree. Verifiez votre email pour confirmer."))); Navigator.pop(context); }
     } catch (e) {
       setState(() { _errorMessage = "Erreur lors de l inscription"; });
     } finally {
@@ -50,7 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: "Email"), validator: (v) => (v == null || !v.contains("@")) ? "Email invalide" : null),
                 const SizedBox(height: 16),
-                TextFormField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Mot de passe"), validator: (v) => (v == null || v.length < 6) ? "6 caracteres minimum" : null),
+                TextFormField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Mot de passe"), validator: (v) => (v == null || v.length < 8) ? "8 caracteres minimum" : null),
                 if (_errorMessage != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text(_errorMessage!, style: const TextStyle(color: AppColors.danger))),
                 const SizedBox(height: 24),
                 ElevatedButton(onPressed: _isLoading ? null : _handleRegister, child: _isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text("S inscrire")),
@@ -62,3 +62,5 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
+
