@@ -28,7 +28,7 @@ Vos données sont conservées tant que votre compte existe. La suppression du co
 Vous pouvez demander l'accès, la correction ou la suppression de vos données, ou les modifier directement dans l'application.
 
 ## 7. Contact
-[EMAIL DE CONTACT]
+[muhamedlamine12@gmail.com]
 
 ## 8. Modifications
 Cette politique peut évoluer ; la date de mise à jour ci-dessus fait foi.
