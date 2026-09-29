@@ -23,7 +23,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
   String? _errorMessage;
 
   Future<void> _pickDate() async {
-    final picked = await showDatePicker(context: context, initialDate: DateTime.now().add(const Duration(days: 30)), firstDate: DateTime.now(), lastDate: DateTime(2100));
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2100),
+    );
     if (picked != null) setState(() { _expirationDate = picked; });
   }
 
@@ -49,28 +54,37 @@ class _AddItemScreenState extends State<AddItemScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text("Ajouter un element")),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: ListView(
-              children: [
-                TextFormField(controller: _titleController, decoration: const InputDecoration(labelText: "Titre"), validator: (v) => (v == null || v.isEmpty) ? "Titre requis" : null),
-                const SizedBox(height: 16),
-                TextFormField(controller: _descriptionController, maxLines: 3, decoration: const InputDecoration(labelText: "Description (optionnel)")),
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: _pickDate,
-                  child: InputDecorator(
-                    decoration: const InputDecoration(labelText: "Date d expiration (optionnel)"),
-                    child: Text(_expirationDate == null ? "Aucune date selectionnee" : DateFormat("dd/MM/yyyy").format(_expirationDate!)),
-                  ),
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            children: [
+              TextFormField(controller: _titleController, decoration: const InputDecoration(labelText: "Titre", prefixIcon: Icon(Icons.title_rounded)), validator: (v) => (v == null || v.isEmpty) ? "Titre requis" : null),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(controller: _descriptionController, maxLines: 3, decoration: const InputDecoration(labelText: "Description (optionnel)", prefixIcon: Icon(Icons.notes_rounded))),
+              const SizedBox(height: AppSpacing.md),
+              InkWell(
+                onTap: _pickDate,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: InputDecorator(
+                  decoration: const InputDecoration(labelText: "Date d expiration (optionnel)", prefixIcon: Icon(Icons.event_outlined)),
+                  child: Text(_expirationDate == null ? "Aucune date selectionnee" : DateFormat("dd/MM/yyyy").format(_expirationDate!)),
                 ),
-                if (_errorMessage != null) Padding(padding: const EdgeInsets.only(top: 16), child: Text(_errorMessage!, style: const TextStyle(color: AppColors.danger))),
-                const SizedBox(height: 32),
-                ElevatedButton(onPressed: _isLoading ? null : _handleSave, child: _isLoading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text("Enregistrer")),
-              ],
-            ),
+              ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: _errorMessage != null
+                    ? Padding(padding: const EdgeInsets.only(top: AppSpacing.md), child: Text(_errorMessage!, style: const TextStyle(color: AppColors.danger)))
+                    : const SizedBox.shrink(),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _handleSave,
+                child: _isLoading
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text("Enregistrer"),
+              ),
+            ],
           ),
         ),
       ),
