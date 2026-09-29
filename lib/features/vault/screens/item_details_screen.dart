@@ -4,6 +4,7 @@ import "../../../models/vault_item.dart";
 import "../../../services/vault_service.dart";
 import "../../../services/reminder_service.dart";
 import "../../../core/theme.dart";
+import "../../../core/category_icons.dart";
 
 class ItemDetailsScreen extends StatefulWidget {
   final VaultItem item;
@@ -18,6 +19,28 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   final _vaultService = VaultService();
   final _reminderService = ReminderService();
   bool _isDeleting = false;
+  String? _categoryName;
+  bool _isLoadingCategory = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategory();
+  }
+
+  Future<void> _loadCategory() async {
+    if (widget.item.categoryId == null) {
+      setState(() { _isLoadingCategory = false; });
+      return;
+    }
+    try {
+      final cats = await _vaultService.getCategories();
+      final match = cats.where((c) => c.id == widget.item.categoryId);
+      setState(() { _categoryName = match.isNotEmpty ? match.first.name : null; _isLoadingCategory = false; });
+    } catch (e) {
+      setState(() { _isLoadingCategory = false; });
+    }
+  }
 
   Future<void> _handleDelete() async {
     final confirm = await showDialog<bool>(
@@ -90,6 +113,10 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          if (!_isLoadingCategory && _categoryName != null) ...[
+                            _infoRow(context, icon: categoryIcon(_categoryName), label: "Categorie", value: _categoryName!),
+                            const SizedBox(height: AppSpacing.lg),
+                          ],
                           if (item.description != null) ...[
                             _infoRow(context, icon: Icons.notes_rounded, label: "Description", value: item.description!),
                             const SizedBox(height: AppSpacing.lg),
