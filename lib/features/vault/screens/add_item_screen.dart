@@ -1,9 +1,11 @@
 ﻿import "package:flutter/material.dart";
 import "package:intl/intl.dart";
 import "../../../models/vault_item.dart";
+import "../../../models/category.dart";
 import "../../../services/vault_service.dart";
 import "../../../services/reminder_service.dart";
 import "../../../core/theme.dart";
+import "../../../core/category_icons.dart";
 
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({super.key});
@@ -19,8 +21,26 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _vaultService = VaultService();
   final _reminderService = ReminderService();
   DateTime? _expirationDate;
+  List<Category> _categories = [];
+  Category? _selectedCategory;
   bool _isLoading = false;
+  bool _isLoadingCategories = true;
   String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final cats = await _vaultService.getCategories();
+      setState(() { _categories = cats; _isLoadingCategories = false; });
+    } catch (e) {
+      setState(() { _isLoadingCategories = false; });
+    }
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -36,7 +56,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _isLoading = true; _errorMessage = null; });
     try {
-      final newItem = VaultItem(id: "", userId: "", title: _titleController.text.trim(), description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(), expirationDate: _expirationDate, createdAt: DateTime.now(), updatedAt: DateTime.now());
+      final newItem = VaultItem(id: "", userId: "", categoryId: _selectedCategory?.id, title: _titleController.text.trim(), description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(), expirationDate: _expirationDate, createdAt: DateTime.now(), updatedAt: DateTime.now());
       final created = await _vaultService.createItem(newItem);
       if (_expirationDate != null) {
         await _reminderService.createDefaultReminders(vaultItemId: created.id, expirationDate: _expirationDate!);
@@ -62,6 +82,27 @@ class _AddItemScreenState extends State<AddItemScreen> {
               TextFormField(controller: _titleController, decoration: const InputDecoration(labelText: "Titre", prefixIcon: Icon(Icons.title_rounded)), validator: (v) => (v == null || v.isEmpty) ? "Titre requis" : null),
               const SizedBox(height: AppSpacing.md),
               TextFormField(controller: _descriptionController, maxLines: 3, decoration: const InputDecoration(labelText: "Description (optionnel)", prefixIcon: Icon(Icons.notes_rounded))),
+              const SizedBox(height: AppSpacing.md),
+              Text("Categorie", style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: AppSpacing.sm),
+              _isLoadingCategories
+                  ? const SizedBox(height: 40, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+                  : Wrap(
+                      spacing: AppSpacing.sm,
+                      runSpacing: AppSpacing.sm,
+                      children: _categories.map((cat) {
+                        final selected = _selectedCategory?.id == cat.id;
+                        return ChoiceChip(
+                          label: Text(cat.name),
+                          avatar: Icon(categoryIcon(cat.name), size: 16, color: selected ? Colors.white : AppColors.primaryLight),
+                          selected: selected,
+                          onSelected: (_) => setState(() { _selectedCategory = selected ? null : cat; }),
+                          selectedColor: AppColors.primary,
+                          labelStyle: TextStyle(color: selected ? Colors.white : null, fontWeight: FontWeight.w500),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.pill), side: BorderSide(color: selected ? AppColors.primary : AppColors.borderDark)),
+                        );
+                      }).toList(),
+                    ),
               const SizedBox(height: AppSpacing.md),
               InkWell(
                 onTap: _pickDate,
@@ -91,3 +132,4 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 }
+
