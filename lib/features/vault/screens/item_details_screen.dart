@@ -23,6 +23,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
         title: const Text("Supprimer cet element ?"),
         content: const Text("Cette action est irreversible."),
         actions: [
@@ -43,39 +44,72 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     }
   }
 
+  Widget _infoRow(BuildContext context, {required IconData icon, required String label, required String value, Color? valueColor}) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppRadius.sm)),
+          child: Icon(icon, size: 18, color: AppColors.primaryLight),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: 2),
+              Text(value, style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: valueColor, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
     return Scaffold(
       appBar: AppBar(
-        title: Text(item.title),
-        actions: [IconButton(icon: const Icon(Icons.delete_outline, color: AppColors.danger), onPressed: _isDeleting ? null : _handleDelete)],
+        title: Text(item.title, overflow: TextOverflow.ellipsis),
+        actions: [IconButton(icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger), onPressed: _isDeleting ? null : _handleDelete)],
       ),
       body: _isDeleting
           ? const Center(child: CircularProgressIndicator())
           : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (item.description != null) ...[
-                      const Text("Description", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
-                      Text(item.description!, style: const TextStyle(fontSize: 16)),
-                      const SizedBox(height: 24),
-                    ],
-                    const Text("Date de creation", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    const SizedBox(height: 4),
-                    Text(DateFormat("dd/MM/yyyy").format(item.createdAt), style: const TextStyle(fontSize: 16)),
-                    const SizedBox(height: 24),
-                    if (item.expirationDate != null) ...[
-                      const Text("Date d expiration", style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      const SizedBox(height: 4),
-                      Text(DateFormat("dd/MM/yyyy").format(item.expirationDate!), style: TextStyle(fontSize: 16, color: item.isExpired ? AppColors.danger : (item.isExpiringSoon ? AppColors.warning : AppColors.textPrimary), fontWeight: FontWeight.w600)),
-                    ],
-                  ],
-                ),
+              child: ListView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (item.description != null) ...[
+                            _infoRow(context, icon: Icons.notes_rounded, label: "Description", value: item.description!),
+                            const SizedBox(height: AppSpacing.lg),
+                          ],
+                          _infoRow(context, icon: Icons.calendar_today_outlined, label: "Date de creation", value: DateFormat("dd/MM/yyyy").format(item.createdAt)),
+                          if (item.expirationDate != null) ...[
+                            const SizedBox(height: AppSpacing.lg),
+                            _infoRow(
+                              context,
+                              icon: Icons.event_busy_outlined,
+                              label: "Date d expiration",
+                              value: DateFormat("dd/MM/yyyy").format(item.expirationDate!),
+                              valueColor: item.isExpired ? AppColors.danger : (item.isExpiringSoon ? AppColors.warning : null),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
     );
