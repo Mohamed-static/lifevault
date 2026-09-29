@@ -1,16 +1,33 @@
 ﻿import "package:flutter/material.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
 import "package:flutter_dotenv/flutter_dotenv.dart";
+import "package:shared_preferences/shared_preferences.dart";
 import "core/theme.dart";
 import "services/supabase_service.dart";
 import "features/auth/screens/login_screen.dart";
 import "features/home/screens/home_screen.dart";
 
+final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.dark);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   await Supabase.initialize(url: dotenv.env["SUPABASE_URL"]!, publishableKey: dotenv.env["SUPABASE_ANON_KEY"]!);
+  final prefs = await SharedPreferences.getInstance();
+  final savedTheme = prefs.getString("theme_mode");
+  if (savedTheme == "light") themeModeNotifier.value = ThemeMode.light;
   runApp(const LifeVaultApp());
+}
+
+Future<void> toggleTheme() async {
+  final prefs = await SharedPreferences.getInstance();
+  if (themeModeNotifier.value == ThemeMode.dark) {
+    themeModeNotifier.value = ThemeMode.light;
+    await prefs.setString("theme_mode", "light");
+  } else {
+    themeModeNotifier.value = ThemeMode.dark;
+    await prefs.setString("theme_mode", "dark");
+  }
 }
 
 class LifeVaultApp extends StatelessWidget {
@@ -18,11 +35,18 @@ class LifeVaultApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "LifeVault",
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      home: const AuthGate(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: "LifeVault",
+          debugShowCheckedModeBanner: false,
+          themeMode: mode,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }
@@ -42,4 +66,3 @@ class AuthGate extends StatelessWidget {
     );
   }
 }
-
