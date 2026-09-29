@@ -1,9 +1,13 @@
-﻿import "package:flutter/material.dart";
+﻿import "dart:io";
+import "package:flutter/material.dart";
 import "package:intl/intl.dart";
+import "package:file_picker/file_picker.dart";
 import "../../../models/vault_item.dart";
 import "../../../models/category.dart";
 import "../../../services/vault_service.dart";
 import "../../../services/reminder_service.dart";
+import "../../../services/storage_service.dart";
+import "../../../services/attachment_service.dart";
 import "../../../core/theme.dart";
 import "../../../core/category_icons.dart";
 
@@ -20,9 +24,12 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _descriptionController = TextEditingController();
   final _vaultService = VaultService();
   final _reminderService = ReminderService();
+  final _storageService = StorageService();
+  final _attachmentService = AttachmentService();
   DateTime? _expirationDate;
   List<Category> _categories = [];
   Category? _selectedCategory;
+  PlatformFile? _pickedFile;
   bool _isLoading = false;
   bool _isLoadingCategories = true;
   String? _errorMessage;
@@ -39,6 +46,29 @@ class _AddItemScreenState extends State<AddItemScreen> {
       setState(() { _categories = cats; _isLoadingCategories = false; });
     } catch (e) {
       setState(() { _isLoadingCategories = false; });
+    }
+  }
+
+  Future<void> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ["jpg", "jpeg", "png", "webp", "pdf"]);
+    if (result != null && result.files.isNotEmpty) {
+      setState(() { _pickedFile = result.files.first; });
+    }
+  }
+
+  String _mimeTypeFor(String extension) {
+    switch (extension.toLowerCase()) {
+      case "jpg":
+      case "jpeg":
+        return "image/jpeg";
+      case "png":
+        return "image/png";
+      case "webp":
+        return "image/webp";
+      case "pdf":
+        return "application/pdf";
+      default:
+        return "application/octet-stream";
     }
   }
 
@@ -60,6 +90,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
       final created = await _vaultService.createItem(newItem);
       if (_expirationDate != null) {
         await _reminderService.createDefaultReminders(vaultItemId: created.id, expirationDate: _expirationDate!);
+      }
+      if (_pickedFile != null && _pickedFile!.path != null) {
+        final extension = _pickedFile!.extension ?? "";
+        final mimeType = _mimeTypeFor(extension);
+        final file = File(_pickedFile!.path!);
+        final path = await _storageService.uploadFile(file: file, fileName: _pickedFile!.name, mimeType: mimeType);
+        await _attachmentService.createAttachment(vaultItemId: created.id, filePath: path, fileName: _pickedFile!.name, mimeType: mimeType, fileSize: _pickedFile!.size);
       }
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -112,6 +149,15 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   child: Text(_expirationDate == null ? "Aucune date selectionnee" : DateFormat("dd/MM/yyyy").format(_expirationDate!)),
                 ),
               ),
+              const SizedBox(height: AppSpacing.md),
+              InkWell(
+                onTap: _pickFile,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                child: InputDecorator(
+                  decoration: const InputDecoration(labelText: "Fichier (optionnel, max 10 Mo)", prefixIcon: Icon(Icons.attach_file_rounded)),
+                  child: Text(_pickedFile == null ? "Aucun fichier selectionne" : _pickedFile!.name, overflow: TextOverflow.ellipsis),
+                ),
+              ),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),
                 child: _errorMessage != null
@@ -132,4 +178,3 @@ class _AddItemScreenState extends State<AddItemScreen> {
     );
   }
 }
-

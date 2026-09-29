@@ -1,8 +1,13 @@
 ﻿import "package:flutter/material.dart";
 import "package:intl/intl.dart";
+import "package:cached_network_image/cached_network_image.dart";
+import "package:url_launcher/url_launcher.dart";
 import "../../../models/vault_item.dart";
+import "../../../models/attachment.dart";
 import "../../../services/vault_service.dart";
 import "../../../services/reminder_service.dart";
+import "../../../services/storage_service.dart";
+import "../../../services/attachment_service.dart";
 import "../../../core/theme.dart";
 import "../../../core/category_icons.dart";
 
@@ -18,14 +23,20 @@ class ItemDetailsScreen extends StatefulWidget {
 class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   final _vaultService = VaultService();
   final _reminderService = ReminderService();
+  final _storageService = StorageService();
+  final _attachmentService = AttachmentService();
   bool _isDeleting = false;
   String? _categoryName;
   bool _isLoadingCategory = true;
+  Attachment? _attachment;
+  String? _signedUrl;
+  bool _isLoadingAttachment = true;
 
   @override
   void initState() {
     super.initState();
     _loadCategory();
+    _loadAttachment();
   }
 
   Future<void> _loadCategory() async {
@@ -40,6 +51,26 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     } catch (e) {
       setState(() { _isLoadingCategory = false; });
     }
+  }
+
+  Future<void> _loadAttachment() async {
+    try {
+      final att = await _attachmentService.getAttachmentForItem(widget.item.id);
+      if (att != null) {
+        final url = await _storageService.getSignedUrl(att.filePath);
+        setState(() { _attachment = att; _signedUrl = url; _isLoadingAttachment = false; });
+      } else {
+        setState(() { _isLoadingAttachment = false; });
+      }
+    } catch (e) {
+      setState(() { _isLoadingAttachment = false; });
+    }
+  }
+
+  Future<void> _openFile() async {
+    if (_signedUrl == null) return;
+    final uri = Uri.parse(_signedUrl!);
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Future<void> _handleDelete() async {
@@ -58,6 +89,10 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     if (confirm != true) return;
     setState(() { _isDeleting = true; });
     try {
+      if (_attachment != null) {
+        await _storageService.deleteFile(_attachment!.filePath);
+        await _attachmentService.deleteAttachment(_attachment!.id);
+      }
       await _reminderService.deleteRemindersForItem(widget.item.id);
       await _vaultService.deleteItem(widget.item.id);
       if (mounted) Navigator.pop(context, true);
@@ -93,6 +128,36 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     );
   }
 
+  Widget _attachmentSection(BuildContext context) {
+    if (_isLoadingAttachment) return const SizedBox(height: 40, child: Center(child: CircularProgressIndicator(strokeWidth: 2)));
+    if (_attachment == null || _signedUrl == null) return const SizedBox.shrink();
+    if (_attachment!.isImage) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: GestureDetector(
+          onTap: _openFile,
+          child: CachedNetworkImage(imageUrl: _signedUrl!, height: 200, width: double.infinity, fit: BoxFit.cover, placeholder: (c, u) => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())), errorWidget: (c, u, e) => const SizedBox(height: 100, child: Center(child: Icon(Icons.broken_image_outlined)))),
+        ),
+      );
+    }
+    return InkWell(
+      onTap: _openFile,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        decoration: BoxDecoration(border: Border.all(color: AppColors.borderDark), borderRadius: BorderRadius.circular(AppRadius.md)),
+        child: Row(
+          children: [
+            const Icon(Icons.picture_as_pdf_outlined, color: AppColors.danger),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(child: Text(_attachment!.fileName, overflow: TextOverflow.ellipsis)),
+            const Icon(Icons.open_in_new_rounded, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final item = widget.item;
@@ -107,6 +172,8 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
+                  _attachmentSection(context),
+                  if (_attachment != null) const SizedBox(height: AppSpacing.lg),
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.lg),
