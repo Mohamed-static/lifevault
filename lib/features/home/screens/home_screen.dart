@@ -1,5 +1,6 @@
 ﻿import "package:flutter/material.dart";
 import "../../../models/vault_item.dart";
+import "../../../models/category.dart";
 import "../../../services/vault_service.dart";
 import "../../../services/auth_service.dart";
 import "../../../core/theme.dart";
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _authService = AuthService();
   List<VaultItem> _items = [];
   List<VaultItem> _expiringSoon = [];
+  Map<String, String> _categoryNames = {};
   bool _isLoading = true;
 
   @override
@@ -33,7 +35,12 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final items = await _vaultService.getItems();
       final expiring = await _vaultService.getExpiringSoon();
-      setState(() { _items = items; _expiringSoon = expiring; _isLoading = false; });
+      final cats = await _vaultService.getCategories();
+      final catMap = <String, String>{};
+      for (final Category c in cats) {
+        catMap[c.id] = c.name;
+      }
+      setState(() { _items = items; _expiringSoon = expiring; _categoryNames = catMap; _isLoading = false; });
     } catch (e) {
       setState(() { _isLoading = false; });
     }
@@ -77,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (_expiringSoon.isNotEmpty) ...[
                     Text("Expirent bientot", style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: AppSpacing.sm),
-                    ..._expiringSoon.asMap().entries.map((e) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.sm), child: VaultItemCard(item: e.value, index: e.key, onTap: () => _openDetails(e.value)))),
+                    ..._expiringSoon.asMap().entries.map((e) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.sm), child: VaultItemCard(item: e.value, index: e.key, categoryName: e.value.categoryId != null ? _categoryNames[e.value.categoryId] : null, onTap: () => _openDetails(e.value)))),
                     const SizedBox(height: AppSpacing.lg),
                   ],
                   Text("Tous les elements", style: Theme.of(context).textTheme.headlineMedium),
@@ -95,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
-                  ..._items.asMap().entries.map((e) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.sm), child: VaultItemCard(item: e.value, index: e.key, onTap: () => _openDetails(e.value)))),
+                  ..._items.asMap().entries.map((e) => Padding(padding: const EdgeInsets.only(bottom: AppSpacing.sm), child: VaultItemCard(item: e.value, index: e.key, categoryName: e.value.categoryId != null ? _categoryNames[e.value.categoryId] : null, onTap: () => _openDetails(e.value)))),
                   const SizedBox(height: 80),
                 ],
               ),
@@ -138,5 +145,3 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
-
-

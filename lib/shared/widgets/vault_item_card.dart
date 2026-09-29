@@ -1,13 +1,15 @@
 ﻿import "package:flutter/material.dart";
 import "../../models/vault_item.dart";
 import "../../core/theme.dart";
+import "../../core/category_icons.dart";
 
 class VaultItemCard extends StatelessWidget {
   final VaultItem item;
   final VoidCallback onTap;
   final int index;
+  final String? categoryName;
 
-  const VaultItemCard({super.key, required this.item, required this.onTap, this.index = 0});
+  const VaultItemCard({super.key, required this.item, required this.onTap, this.index = 0, this.categoryName});
 
   Color _statusColor() {
     if (item.isExpired) return AppColors.danger;
@@ -44,7 +46,7 @@ class VaultItemCard extends StatelessWidget {
                   height: 48,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(gradient: AppColors.gradientPrimary.scale(0.15), borderRadius: BorderRadius.circular(AppRadius.sm)),
-                  child: const Icon(Icons.description_outlined, color: AppColors.primaryLight),
+                  child: Icon(categoryIcon(categoryName), color: AppColors.primaryLight),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -53,14 +55,19 @@ class VaultItemCard extends StatelessWidget {
                     children: [
                       Text(item.title, style: Theme.of(context).textTheme.titleLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 4),
-                      if (item.expirationDate != null)
-                        Row(
-                          children: [
+                      Row(
+                        children: [
+                          if (categoryName != null) ...[
+                            Text(categoryName!, style: Theme.of(context).textTheme.labelSmall),
+                            if (item.expirationDate != null) const Text("  •  ", style: TextStyle(color: AppColors.textSecondary)),
+                          ],
+                          if (item.expirationDate != null) ...[
                             Container(width: 7, height: 7, decoration: BoxDecoration(color: _statusColor(), shape: BoxShape.circle)),
                             const SizedBox(width: 6),
                             Text(_statusText(), style: TextStyle(fontSize: 13, color: _statusColor(), fontWeight: FontWeight.w500)),
                           ],
-                        ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
