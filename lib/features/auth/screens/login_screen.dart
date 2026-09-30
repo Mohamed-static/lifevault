@@ -2,6 +2,7 @@
 import "../../../services/auth_service.dart";
 import "../../../core/theme.dart";
 import "register_screen.dart";
+import "forgot_password_screen.dart";
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -84,13 +85,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: "Email", prefixIcon: Icon(Icons.mail_outline_rounded)), validator: (v) => (v == null || !v.contains("@")) ? "Email invalide" : null),
                           const SizedBox(height: AppSpacing.md),
                           TextFormField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Mot de passe", prefixIcon: Icon(Icons.lock_outline_rounded)), validator: (v) => (v == null || v.isEmpty) ? "Mot de passe requis" : null),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () { Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())); },
+                              child: const Text("Mot de passe oublie ?"),
+                            ),
+                          ),
                           AnimatedSwitcher(
                             duration: const Duration(milliseconds: 250),
                             child: _errorMessage != null
-                                ? Padding(padding: const EdgeInsets.only(top: AppSpacing.md), child: Text(_errorMessage!, style: const TextStyle(color: AppColors.danger)))
+                                ? Padding(padding: const EdgeInsets.only(bottom: AppSpacing.md), child: Text(_errorMessage!, style: const TextStyle(color: AppColors.danger)))
                                 : const SizedBox.shrink(),
                           ),
-                          const SizedBox(height: AppSpacing.xl),
+                          const SizedBox(height: AppSpacing.sm),
                           ElevatedButton(
                             onPressed: _isLoading ? null : _handleLogin,
                             child: _isLoading

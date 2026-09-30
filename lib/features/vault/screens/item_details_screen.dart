@@ -10,6 +10,7 @@ import "../../../services/storage_service.dart";
 import "../../../services/attachment_service.dart";
 import "../../../core/theme.dart";
 import "../../../core/category_icons.dart";
+import "edit_item_screen.dart";
 
 class ItemDetailsScreen extends StatefulWidget {
   final VaultItem item;
@@ -21,6 +22,7 @@ class ItemDetailsScreen extends StatefulWidget {
 }
 
 class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
+  late VaultItem _item;
   final _vaultService = VaultService();
   final _reminderService = ReminderService();
   final _storageService = StorageService();
@@ -35,18 +37,19 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    _item = widget.item;
     _loadCategory();
     _loadAttachment();
   }
 
   Future<void> _loadCategory() async {
-    if (widget.item.categoryId == null) {
-      setState(() { _isLoadingCategory = false; });
+    if (_item.categoryId == null) {
+      setState(() { _isLoadingCategory = false; _categoryName = null; });
       return;
     }
     try {
       final cats = await _vaultService.getCategories();
-      final match = cats.where((c) => c.id == widget.item.categoryId);
+      final match = cats.where((c) => c.id == _item.categoryId);
       setState(() { _categoryName = match.isNotEmpty ? match.first.name : null; _isLoadingCategory = false; });
     } catch (e) {
       setState(() { _isLoadingCategory = false; });
@@ -55,7 +58,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
 
   Future<void> _loadAttachment() async {
     try {
-      final att = await _attachmentService.getAttachmentForItem(widget.item.id);
+      final att = await _attachmentService.getAttachmentForItem(_item.id);
       if (att != null) {
         final url = await _storageService.getSignedUrl(att.filePath);
         setState(() { _attachment = att; _signedUrl = url; _isLoadingAttachment = false; });
@@ -71,6 +74,18 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     if (_signedUrl == null) return;
     final uri = Uri.parse(_signedUrl!);
     if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  void _handleEdit() async {
+    final changed = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditItemScreen(item: _item)));
+    if (changed == true) {
+      final refreshed = await _vaultService.getItems();
+      final match = refreshed.where((i) => i.id == _item.id);
+      if (match.isNotEmpty) {
+        setState(() { _item = match.first; _isLoadingCategory = true; });
+        _loadCategory();
+      }
+    }
   }
 
   Future<void> _handleDelete() async {
@@ -93,8 +108,8 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
         await _storageService.deleteFile(_attachment!.filePath);
         await _attachmentService.deleteAttachment(_attachment!.id);
       }
-      await _reminderService.deleteRemindersForItem(widget.item.id);
-      await _vaultService.deleteItem(widget.item.id);
+      await _reminderService.deleteRemindersForItem(_item.id);
+      await _vaultService.deleteItem(_item.id);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() { _isDeleting = false; });
@@ -160,11 +175,14 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.item;
+    final item = _item;
     return Scaffold(
       appBar: AppBar(
         title: Text(item.title, overflow: TextOverflow.ellipsis),
-        actions: [IconButton(icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger), onPressed: _isDeleting ? null : _handleDelete)],
+        actions: [
+          IconButton(icon: const Icon(Icons.edit_outlined), onPressed: _isDeleting ? null : _handleEdit),
+          IconButton(icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger), onPressed: _isDeleting ? null : _handleDelete),
+        ],
       ),
       body: _isDeleting
           ? const Center(child: CircularProgressIndicator())

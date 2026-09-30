@@ -2,12 +2,13 @@
 import "../../../models/vault_item.dart";
 import "../../../models/category.dart";
 import "../../../services/vault_service.dart";
-import "../../../services/auth_service.dart";
 import "../../../core/theme.dart";
 import "../../../shared/widgets/vault_item_card.dart";
 import "../../vault/screens/add_item_screen.dart";
 import "../../vault/screens/item_details_screen.dart";
-import "../../../main.dart";
+import "../../vault/screens/search_screen.dart";
+import "../../reminders/screens/reminders_screen.dart";
+import "../../settings/screens/settings_screen.dart";
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,7 +19,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _vaultService = VaultService();
-  final _authService = AuthService();
   List<VaultItem> _items = [];
   List<VaultItem> _expiringSoon = [];
   Map<String, String> _categoryNames = {};
@@ -62,8 +62,19 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text("LifeVault"),
         actions: [
-          IconButton(icon: const Icon(Icons.brightness_6_outlined), onPressed: toggleTheme, tooltip: "Changer de theme"),
-          IconButton(icon: const Icon(Icons.logout_rounded), onPressed: () => _authService.signOut()),
+          IconButton(icon: const Icon(Icons.search_rounded), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()))),
+          Stack(
+            children: [
+              IconButton(icon: const Icon(Icons.notifications_none_rounded), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RemindersScreen()))),
+              if (_expiringSoon.isNotEmpty)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle)),
+                ),
+            ],
+          ),
+          IconButton(icon: const Icon(Icons.settings_outlined), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()))),
         ],
       ),
       body: _isLoading
