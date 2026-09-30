@@ -6,6 +6,7 @@ import "core/theme.dart";
 import "services/supabase_service.dart";
 import "features/auth/screens/login_screen.dart";
 import "features/home/screens/home_screen.dart";
+import "features/splash/screens/splash_screen.dart";
 
 final ValueNotifier<ThemeMode> themeModeNotifier = ValueNotifier(ThemeMode.dark);
 
@@ -44,7 +45,7 @@ class LifeVaultApp extends StatelessWidget {
           themeMode: mode,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
-          home: const AuthGate(),
+          home: const SplashScreen(),
         );
       },
     );
