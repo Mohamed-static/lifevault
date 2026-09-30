@@ -4,6 +4,7 @@ import "package:flutter_dotenv/flutter_dotenv.dart";
 import "package:shared_preferences/shared_preferences.dart";
 import "core/theme.dart";
 import "services/supabase_service.dart";
+import "services/notification_service.dart";
 import "features/auth/screens/login_screen.dart";
 import "features/home/screens/home_screen.dart";
 import "features/splash/screens/splash_screen.dart";
@@ -14,6 +15,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
   await Supabase.initialize(url: dotenv.env["SUPABASE_URL"]!, publishableKey: dotenv.env["SUPABASE_ANON_KEY"]!);
+  await NotificationService.init();
   final prefs = await SharedPreferences.getInstance();
   final savedTheme = prefs.getString("theme_mode");
   if (savedTheme == "light") themeModeNotifier.value = ThemeMode.light;

@@ -93,7 +93,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
       final newItem = VaultItem(id: "", userId: "", categoryId: _selectedCategory?.id, title: _titleController.text.trim(), description: _descriptionController.text.trim().isEmpty ? null : _descriptionController.text.trim(), expirationDate: _expirationDate, createdAt: DateTime.now(), updatedAt: DateTime.now());
       final created = await _vaultService.createItem(newItem);
       if (_expirationDate != null) {
-        await _reminderService.createDefaultReminders(vaultItemId: created.id, expirationDate: _expirationDate!);
+         await _reminderService.createDefaultReminders(vaultItemId: created.id, expirationDate: _expirationDate!, item: created);
       }
       if (_selectedTagIds.isNotEmpty) {
         await _tagService.setTagsForItem(vaultItemId: created.id, tagIds: _selectedTagIds);

@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _scaleAnim = CurvedAnimation(parent: _controller, curve: Curves.easeOutBack);
     _fadeAnim = CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.easeIn));
     _controller.forward();
-    _navigateNext();
+    _requestPermissionsAndNavigate();
   }
 
   Future<void> _navigateNext() async {

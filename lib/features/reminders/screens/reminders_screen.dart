@@ -1,99 +1,60 @@
-import "package:flutter/material.dart";
-import "package:intl/intl.dart";
-import "../../../models/reminder.dart";
-import "../../../models/vault_item.dart";
-import "../../../services/reminder_service.dart";
-import "../../../services/vault_service.dart";
-import "../../../core/theme.dart";
-import "../../vault/screens/item_details_screen.dart";
+import "package:supabase_flutter/supabase_flutter.dart";
+import "../models/reminder.dart";
+import "../models/vault_item.dart";
+import "supabase_service.dart";
+import "notification_service.dart";
 
-class RemindersScreen extends StatefulWidget {
-  const RemindersScreen({super.key});
+class ReminderService {
+  final SupabaseClient _client = SupabaseService.client;
 
-  @override
-  State<RemindersScreen> createState() => _RemindersScreenState();
-}
-
-class _RemindersScreenState extends State<RemindersScreen> {
-  final _reminderService = ReminderService();
-  final _vaultService = VaultService();
-  List<Reminder> _reminders = [];
-  Map<String, VaultItem> _itemsById = {};
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
+  Future<List<Reminder>> getReminders() async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) throw Exception("Utilisateur non authentifie");
+    final data = await _client.from("reminders").select().eq("user_id", userId).order("scheduled_date", ascending: true);
+    return (data as List).map((e) => Reminder.fromJson(e)).toList();
   }
 
-  Future<void> _loadData() async {
-    setState(() { _isLoading = true; });
-    try {
-      final reminders = await _reminderService.getUpcomingReminders();
-      final items = await _vaultService.getItems();
-      final map = <String, VaultItem>{};
-      for (final item in items) {
-        map[item.id] = item;
-      }
-      setState(() { _reminders = reminders; _itemsById = map; _isLoading = false; });
-    } catch (e) {
-      setState(() { _isLoading = false; });
+  Future<List<Reminder>> getUpcomingReminders() async {
+    final userId = SupabaseService.currentUserId;
+    if (userId == null) throw Exception("Utilisateur non authentifie");
+    final today = DateTime.now().toIso8601String().split("T").first;
+    final data = await _client.from("reminders").select().eq("user_id", userId).eq("is_sent", false).gte("scheduled_date", today).order("scheduled_date", ascending: true);
+    return (data as List).map((e) => Reminder.fromJson(e)).toList();
+  }
+
+  Future<Reminder> createReminder({required String vaultItemId, required int daysBefore, required DateTime expirationDate}) async {
+    final scheduledDate = expirationDate.subtract(Duration(days: daysBefore));
+    final data = await _client.from("reminders").insert({
+      "vault_item_id": vaultItemId,
+      "days_before": daysBefore,
+      "scheduled_date": scheduledDate.toIso8601String().split("T").first,
+    }).select().single();
+    return Reminder.fromJson(data);
+  }
+
+  Future<void> createDefaultReminders({required String vaultItemId, required DateTime expirationDate, VaultItem? item}) async {
+    final reminder30 = await createReminder(vaultItemId: vaultItemId, daysBefore: 30, expirationDate: expirationDate);
+    final reminder7 = await createReminder(vaultItemId: vaultItemId, daysBefore: 7, expirationDate: expirationDate);
+    if (item != null) {
+      await NotificationService.scheduleReminderNotification(reminder: reminder30, item: item);
+      await NotificationService.scheduleReminderNotification(reminder: reminder7, item: item);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Rappels")),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              child: _reminders.isEmpty
-                  ? ListView(
-                      children: [
-                        SizedBox(
-                          height: 400,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.notifications_none_rounded, size: 48, color: Theme.of(context).textTheme.bodyMedium?.color),
-                                const SizedBox(height: AppSpacing.sm),
-                                Text("Aucun rappel a venir", style: Theme.of(context).textTheme.bodyMedium),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      itemCount: _reminders.length,
-                      itemBuilder: (context, index) {
-                        final reminder = _reminders[index];
-                        final item = _itemsById[reminder.vaultItemId];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                          child: Card(
-                            child: ListTile(
-                              onTap: item != null ? () => Navigator.push(context, MaterialPageRoute(builder: (_) => ItemDetailsScreen(item: item))) : null,
-                              leading: Container(
-                                width: 40,
-                                height: 40,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(color: AppColors.warning.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(AppRadius.sm)),
-                                child: const Icon(Icons.timer_outlined, color: AppColors.warning),
-                              ),
-                              title: Text(item?.title ?? "Element supprime"),
-                              subtitle: Text(reminder.scheduledDate != null ? "Rappel le ${DateFormat("dd/MM/yyyy").format(reminder.scheduledDate!)}" : "Date non definie"),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-    );
+  Future<void> markAsSent(String reminderId) async {
+    await _client.from("reminders").update({"is_sent": true}).eq("id", reminderId);
+  }
+
+  Future<void> deleteReminder(String reminderId) async {
+    await _client.from("reminders").delete().eq("id", reminderId);
+    await NotificationService.cancelNotification(reminderId);
+  }
+
+  Future<void> deleteRemindersForItem(String vaultItemId) async {
+    final existing = await _client.from("reminders").select("id").eq("vault_item_id", vaultItemId);
+    for (final row in (existing as List)) {
+      await NotificationService.cancelNotification(row["id"]);
+    }
+    await _client.from("reminders").delete().eq("vault_item_id", vaultItemId);
   }
 }
