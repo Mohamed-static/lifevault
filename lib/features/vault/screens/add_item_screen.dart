@@ -8,8 +8,10 @@ import "../../../services/vault_service.dart";
 import "../../../services/reminder_service.dart";
 import "../../../services/storage_service.dart";
 import "../../../services/attachment_service.dart";
+import "../../../services/tag_service.dart";
 import "../../../core/theme.dart";
 import "../../../core/category_icons.dart";
+import "../../../shared/widgets/tag_selector.dart";
 
 class AddItemScreen extends StatefulWidget {
   const AddItemScreen({super.key});
@@ -26,9 +28,11 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _reminderService = ReminderService();
   final _storageService = StorageService();
   final _attachmentService = AttachmentService();
+  final _tagService = TagService();
   DateTime? _expirationDate;
   List<Category> _categories = [];
   Category? _selectedCategory;
+  List<String> _selectedTagIds = [];
   PlatformFile? _pickedFile;
   bool _isLoading = false;
   bool _isLoadingCategories = true;
@@ -91,6 +95,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
       if (_expirationDate != null) {
         await _reminderService.createDefaultReminders(vaultItemId: created.id, expirationDate: _expirationDate!);
       }
+      if (_selectedTagIds.isNotEmpty) {
+        await _tagService.setTagsForItem(vaultItemId: created.id, tagIds: _selectedTagIds);
+      }
       if (_pickedFile != null && _pickedFile!.path != null) {
         final extension = _pickedFile!.extension ?? "";
         final mimeType = _mimeTypeFor(extension);
@@ -140,6 +147,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
                         );
                       }).toList(),
                     ),
+              const SizedBox(height: AppSpacing.md),
+              Text("Tags", style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: AppSpacing.sm),
+              TagSelector(selectedTagIds: _selectedTagIds, onChanged: (ids) => setState(() { _selectedTagIds = ids; })),
               const SizedBox(height: AppSpacing.md),
               InkWell(
                 onTap: _pickDate,

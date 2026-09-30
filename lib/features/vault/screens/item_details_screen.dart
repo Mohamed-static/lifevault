@@ -11,6 +11,8 @@ import "../../../services/attachment_service.dart";
 import "../../../core/theme.dart";
 import "../../../core/category_icons.dart";
 import "edit_item_screen.dart";
+import "../../../services/tag_service.dart";
+import "../../../models/tag.dart";
 
 class ItemDetailsScreen extends StatefulWidget {
   final VaultItem item;
@@ -27,19 +29,32 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   final _reminderService = ReminderService();
   final _storageService = StorageService();
   final _attachmentService = AttachmentService();
+  final _tagService = TagService();
   bool _isDeleting = false;
   String? _categoryName;
   bool _isLoadingCategory = true;
   Attachment? _attachment;
   String? _signedUrl;
   bool _isLoadingAttachment = true;
+    List<Tag> _tags = [];
+  bool _isLoadingTags = true;
 
   @override
   void initState() {
     super.initState();
+    _loadTags();
     _item = widget.item;
     _loadCategory();
     _loadAttachment();
+  }
+
+    Future<void> _loadTags() async {
+    try {
+      final tags = await _tagService.getTagsForItem(_item.id);
+      setState(() { _tags = tags; _isLoadingTags = false; });
+    } catch (e) {
+      setState(() { _isLoadingTags = false; });
+    }
   }
 
   Future<void> _loadCategory() async {
@@ -208,7 +223,18 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
                           ],
                           _infoRow(context, icon: Icons.calendar_today_outlined, label: "Date de creation", value: DateFormat("dd/MM/yyyy").format(item.createdAt)),
                           if (item.expirationDate != null) ...[
+                                                    if (!_isLoadingTags && _tags.isNotEmpty) ...[
                             const SizedBox(height: AppSpacing.lg),
+                            Text("Tags", style: Theme.of(context).textTheme.labelSmall),
+                            const SizedBox(height: AppSpacing.sm),
+                            Wrap(
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: _tags.map((t) => Chip(label: Text(t.name), backgroundColor: AppColors.primary.withValues(alpha: 0.12), side: BorderSide.none)).toList(),
+                            ),
+                            ],
+                            
+                             const SizedBox(height: AppSpacing.lg),
                             _infoRow(
                               context,
                               icon: Icons.event_busy_outlined,
