@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:shared_preferences/shared_preferences.dart";
 import "../../../core/theme.dart";
 import "../../../main.dart";
+import "../../../services/notification_service.dart";
 import "../../onboarding/screens/onboarding_screen.dart";
 
 class SplashScreen extends StatefulWidget {
@@ -24,6 +25,11 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     _fadeAnim = CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.6, curve: Curves.easeIn));
     _controller.forward();
     _requestPermissionsAndNavigate();
+  }
+
+  Future<void> _requestPermissionsAndNavigate() async {
+    await NotificationService.requestPermissions();
+    await _navigateNext();
   }
 
   Future<void> _navigateNext() async {
