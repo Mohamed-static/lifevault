@@ -1,4 +1,4 @@
-import "package:flutter/material.dart";
+﻿import "package:flutter/material.dart";
 import "../../../services/auth_service.dart";
 import "../../../core/theme.dart";
 import "../../../main.dart";
@@ -109,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       return _tile(
                         icon: mode == ThemeMode.dark ? Icons.dark_mode_outlined : Icons.light_mode_outlined,
                         label: mode == ThemeMode.dark ? "Theme sombre" : "Theme clair",
-                        trailing: Switch(value: mode == ThemeMode.dark, onChanged: (_) => toggleTheme(), activeColor: AppColors.primary),
+                        trailing: Switch(value: mode == ThemeMode.dark, onChanged: (_) => toggleTheme(), activeThumbColor: AppColors.primary),
                       );
                     },
                   ),
