@@ -48,6 +48,11 @@ class AppRadius {
   static const pill = 999.0;
 }
 
+class AppMotion {
+  static const fast = Duration(milliseconds: 150);
+  static const normal = Duration(milliseconds: 220);
+}
+
 class AppTheme {
   static ThemeData get light {
     return ThemeData(
