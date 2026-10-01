@@ -1,4 +1,7 @@
+import "dart:io";
 import "package:flutter/material.dart";
+import "package:image_picker/image_picker.dart";
+import "package:cached_network_image/cached_network_image.dart";
 import "../../../models/user_profile.dart";
 import "../../../services/profile_service.dart";
 import "../../../core/theme.dart";
@@ -17,6 +20,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserProfile? _profile;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isUploadingAvatar = false;
   bool _editing = false;
   String? _errorMessage;
 
@@ -37,6 +41,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       setState(() { _isLoading = false; });
+    }
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 85);
+    if (picked == null) return;
+
+    setState(() { _isUploadingAvatar = true; });
+    try {
+      final newUrl = await _profileService.uploadAvatar(File(picked.path));
+      final refreshed = await _profileService.getProfile();
+      setState(() {
+        _profile = refreshed.avatarUrl == newUrl ? refreshed : UserProfile(
+          id: refreshed.id,
+          email: refreshed.email,
+          fullName: refreshed.fullName,
+          avatarUrl: newUrl,
+          createdAt: refreshed.createdAt,
+          updatedAt: refreshed.updatedAt,
+        );
+      });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll("Exception: ", ""))));
+    } finally {
+      if (mounted) setState(() { _isUploadingAvatar = false; });
     }
   }
 
@@ -70,15 +100,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(AppSpacing.lg),
                 children: [
                   Center(
-                    child: Container(
-                      width: 88,
-                      height: 88,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(gradient: AppColors.gradientPrimary, borderRadius: BorderRadius.circular(AppRadius.lg)),
-                      child: Text(
-                        (_profile?.fullName?.isNotEmpty == true ? _profile!.fullName![0] : "?").toUpperCase(),
-                        style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.bold),
-                      ),
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: 96,
+                          height: 96,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(gradient: AppColors.gradientPrimary, borderRadius: BorderRadius.circular(AppRadius.lg)),
+                          clipBehavior: Clip.antiAlias,
+                          child: _profile?.avatarUrl != null
+                              ? CachedNetworkImage(
+                                  imageUrl: _profile!.avatarUrl!,
+                                  fit: BoxFit.cover,
+                                  width: 96,
+                                  height: 96,
+                                  placeholder: (c, u) => const Center(child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+                                  errorWidget: (c, u, e) => Text(
+                                    (_profile?.fullName?.isNotEmpty == true ? _profile!.fullName![0] : "?").toUpperCase(),
+                                    style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.bold),
+                                  ),
+                                )
+                              : Text(
+                                  (_profile?.fullName?.isNotEmpty == true ? _profile!.fullName![0] : "?").toUpperCase(),
+                                  style: const TextStyle(fontSize: 36, color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                        Positioned(
+                          right: 0,
+                          bottom: 0,
+                          child: GestureDetector(
+                            onTap: _isUploadingAvatar ? null : _pickAndUploadAvatar,
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, shape: BoxShape.circle, border: Border.all(color: AppColors.primary, width: 2)),
+                              child: _isUploadingAvatar
+                                  ? const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Icon(Icons.camera_alt_outlined, size: 16, color: AppColors.primary),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xl),

@@ -28,7 +28,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
-    if (confirm == true) await _authService.signOut();
+    if (confirm == true) {
+      await _authService.signOut();
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    }
   }
 
   Future<void> _handleDeleteAccount() async {
@@ -64,11 +67,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await _authService.deleteAccount();
       if (mounted) {
-        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
+        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (route) => false);
       }
     } catch (e) {
       setState(() { _isDeletingAccount = false; });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Erreur lors de la suppression du compte")));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Erreur: ${e.toString()}")));
+      }
     }
   }
 
