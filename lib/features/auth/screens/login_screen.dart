@@ -17,6 +17,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
@@ -41,9 +43,20 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     try {
       await _authService.signIn(email: _emailController.text.trim(), password: _passwordController.text);
     } catch (e) {
-      setState(() { _errorMessage = "Email ou mot de passe incorrect"; });
+      setState(() { _errorMessage = e.toString().contains("lente") ? "Connexion lente, verifiez votre reseau et reessayez" : "Email ou mot de passe incorrect"; });
     } finally {
       if (mounted) setState(() { _isLoading = false; });
+    }
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() { _isGoogleLoading = true; _errorMessage = null; });
+    try {
+      await _authService.signInWithGoogle();
+    } catch (e) {
+      setState(() { _errorMessage = "Erreur de connexion Google"; });
+    } finally {
+      if (mounted) setState(() { _isGoogleLoading = false; });
     }
   }
 
@@ -82,9 +95,38 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           const SizedBox(height: AppSpacing.xs),
                           Text("Votre coffre-fort numerique", style: Theme.of(context).textTheme.bodyMedium),
                           const SizedBox(height: AppSpacing.xxl),
+                          OutlinedButton.icon(
+                            onPressed: _isGoogleLoading ? null : _handleGoogleLogin,
+                            icon: _isGoogleLoading
+                                ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.g_mobiledata_rounded, size: 24),
+                            label: const Text("Continuer avec Google"),
+                            style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          Row(
+                            children: [
+                              const Expanded(child: Divider()),
+                              Padding(padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm), child: Text("ou", style: Theme.of(context).textTheme.bodyMedium)),
+                              const Expanded(child: Divider()),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
                           TextFormField(controller: _emailController, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: "Email", prefixIcon: Icon(Icons.mail_outline_rounded)), validator: (v) => (v == null || !v.contains("@")) ? "Email invalide" : null),
                           const SizedBox(height: AppSpacing.md),
-                          TextFormField(controller: _passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Mot de passe", prefixIcon: Icon(Icons.lock_outline_rounded)), validator: (v) => (v == null || v.isEmpty) ? "Mot de passe requis" : null),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: _obscurePassword,
+                            decoration: InputDecoration(
+                              labelText: "Mot de passe",
+                              prefixIcon: const Icon(Icons.lock_outline_rounded),
+                              suffixIcon: IconButton(
+                                icon: Icon(_obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 20),
+                                onPressed: () => setState(() { _obscurePassword = !_obscurePassword; }),
+                              ),
+                            ),
+                            validator: (v) => (v == null || v.isEmpty) ? "Mot de passe requis" : null,
+                          ),
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
